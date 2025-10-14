@@ -24,8 +24,11 @@ Ce guide vous montre comment déployer un site WordPress complet (local + produc
 ### Étape 1 : Créer un nouveau site depuis le template
 
 ```bash
-# Créer un nouveau projet depuis le template
+# Créer un nouveau projet depuis le template sur GitHub
 gh repo create monsite --template gillesah/wordpress-model --private
+
+# Cloner le repository localement
+git clone git@github.com:VOTRE-USERNAME/monsite.git
 cd monsite
 ```
 
@@ -261,6 +264,7 @@ Le process est identique :
 ```bash
 # 1. Nouveau projet
 gh repo create site2 --template gillesah/wordpress-model --private
+git clone git@github.com:VOTRE-USERNAME/site2.git
 cd site2/project
 
 # 2. Déployer (avec un port différent !)
