@@ -18,11 +18,15 @@ PROJECT_NAME=$1
 SERVER_HOST=$2
 SERVER_USER=$3
 SSH_KEY_PATH=$4
+FOLDER_NAME=$5
 
 if [ -z "$PROJECT_NAME" ] || [ -z "$SERVER_HOST" ] || [ -z "$SERVER_USER" ] || [ -z "$SSH_KEY_PATH" ]; then
-    log_error "Usage: $0 <project_name> <server_host> <server_user> <ssh_key_path>"
+    log_error "Usage: $0 <project_name> <server_host> <server_user> <ssh_key_path> <folder_name>"
     exit 1
 fi
+
+# Si FOLDER_NAME n'est pas fourni, utiliser PROJECT_NAME
+FOLDER_NAME=${FOLDER_NAME:-$PROJECT_NAME}
 
 log_info "Création du repository GitHub : $PROJECT_NAME"
 
@@ -71,6 +75,10 @@ else
     log_error "Clé SSH non trouvée à $SSH_KEY_PATH"
     exit 1
 fi
+
+# Secret 4: FOLDER_NAME
+echo "$FOLDER_NAME" | gh secret set FOLDER_NAME
+log_success "Secret FOLDER_NAME configuré"
 
 # Vérifier les secrets
 log_info "Vérification des secrets configurés..."

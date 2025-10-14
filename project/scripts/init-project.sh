@@ -224,7 +224,7 @@ echo ""
 log_info "=== ÉTAPE 5/7 : Création du repository GitHub privé ==="
 
 cd project
-./scripts/create-github-repo.sh "$PROJECT_NAME" "$SERVER_HOST" "$SERVER_USER" "$SSH_KEY_PATH"
+./scripts/create-github-repo.sh "$PROJECT_NAME" "$SERVER_HOST" "$SERVER_USER" "$SSH_KEY_PATH" "$PROJECT_NAME"
 
 if [ $? -ne 0 ]; then
     log_error "Échec de la création du repository GitHub"

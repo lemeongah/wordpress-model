@@ -21,7 +21,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
-            cd /var/www/bskyblog/
+            cd /var/www/${{ secrets.FOLDER_NAME }}/
 
             echo "🔍 Nettoyage des modifications locales..."
             git fetch origin
