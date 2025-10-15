@@ -1,10 +1,18 @@
-# variables à adapter
-PROD_SSH="gillesah@193.203.169.72"                 # SSH vers la prod
-PROD_BACKUPS="/var/www/${FOLDER_NAME}/project/backups"   # dossier où ton script dépose les .sql.gz
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Source des variables d'environnement depuis le fichier .env
+# Charger la configuration serveur globale depuis WP/.env
+WP_ENV_PATH="../../../.env"
+if [[ ! -f "$WP_ENV_PATH" ]]; then
+    echo "❌ Fichier de configuration serveur manquant : $WP_ENV_PATH"
+    echo "   Copiez ../../../.env.sample vers ../../../.env et configurez-le"
+    exit 1
+fi
+
+echo "📋 Chargement de la configuration serveur..."
+source "$WP_ENV_PATH"
+
+# Source des variables d'environnement depuis le fichier .env local du projet
 if [[ -f "../.env" ]]; then
     source "../.env"
 else
@@ -12,8 +20,8 @@ else
     exit 1
 fi
 
-# ====== À ADAPTER ======
-PROD_SSH="gillesah@193.203.169.72"
+# ====== Configuration Production ======
+PROD_SSH="${SERVER_USER}@${SERVER_HOST}"
 PROD_BACKUPS="/var/www/${FOLDER_NAME}/project/backups"
 PROD_UPLOADS="/var/www/${FOLDER_NAME}/project/wp/wp-content/uploads"  # chemin des uploads sur la prod
 LOCAL_UPLOADS="../wp/wp-content/uploads"                         # chemin local des uploads

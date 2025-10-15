@@ -30,6 +30,17 @@ if [ ! -f ".env.sample" ]; then
     exit 1
 fi
 
+# Charger la configuration serveur globale
+WP_ENV_PATH="../../.env"
+if [ ! -f "$WP_ENV_PATH" ]; then
+    log_error "Fichier de configuration serveur manquant : $WP_ENV_PATH"
+    log_error "Copiez ../../.env.sample vers ../../.env et configurez-le"
+    exit 1
+fi
+
+log_info "Chargement de la configuration serveur depuis $WP_ENV_PATH"
+source "$WP_ENV_PATH"
+
 # Vérification des dépendances
 log_info "Vérification des dépendances..."
 
@@ -51,121 +62,94 @@ fi
 log_success "Toutes les dépendances sont installées"
 
 # ========================================
-# ÉTAPE 1 : Collecte des informations
+# ÉTAPE 1 : Copie du fichier .env depuis le template
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 1/7 : Informations du projet ==="
-echo ""
+log_info "=== ÉTAPE 1/7 : Création du fichier .env depuis .env.sample ==="
 
-read -p "📝 Nom du projet (ex: myblog, sans espaces) : " PROJECT_NAME
-PROJECT_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]-')
+if [ -f ".env" ]; then
+    log_warning "Fichier .env existant trouvé"
+    read -p "Écraser le fichier .env existant ? (o/N) : " OVERWRITE
+    if [[ ! "$OVERWRITE" =~ ^[oOyY]$ ]]; then
+        log_info "Conservation du fichier .env existant"
+    else
+        cp .env.sample .env
+        log_success "Fichier .env créé depuis .env.sample"
+        log_warning "⚠️  IMPORTANT : Éditez maintenant le fichier .env pour configurer votre site"
+        echo ""
+        echo "Valeurs à modifier dans .env :"
+        echo "  - COMPOSE_PROJECT_NAME (nom unique du projet)"
+        echo "  - LOCAL_PORT (port Docker local, ex: 8089)"
+        echo "  - ADMIN_PASSWORD (mot de passe admin WordPress)"
+        echo "  - ADMIN_EMAIL (email admin)"
+        echo "  - SITE_NAME (nom du site)"
+        echo "  - SITE_COPYRIGHT (copyright footer)"
+        echo "  - PROD_URL (URL de production, ex: https://monsite.com)"
+        echo "  - FOLDER_NAME (nom du dossier sur le serveur)"
+        echo "  - SERVER_PORT (port Docker sur le serveur)"
+        echo ""
+        read -p "Voulez-vous éditer .env maintenant ? (o/N) : " EDIT_NOW
+        if [[ "$EDIT_NOW" =~ ^[oOyY]$ ]]; then
+            ${EDITOR:-nano} .env
+        else
+            log_warning "N'oubliez pas d'éditer .env avant de continuer !"
+            exit 0
+        fi
+    fi
+else
+    cp .env.sample .env
+    log_success "Fichier .env créé depuis .env.sample"
+    log_warning "⚠️  IMPORTANT : Éditez maintenant le fichier .env pour configurer votre site"
+    echo ""
+    echo "Valeurs à modifier dans .env :"
+    echo "  - COMPOSE_PROJECT_NAME (nom unique du projet)"
+    echo "  - LOCAL_PORT (port Docker local, ex: 8089)"
+    echo "  - ADMIN_PASSWORD (mot de passe admin WordPress)"
+    echo "  - ADMIN_EMAIL (email admin)"
+    echo "  - SITE_NAME (nom du site)"
+    echo "  - SITE_COPYRIGHT (copyright footer)"
+    echo "  - PROD_URL (URL de production, ex: https://monsite.com)"
+    echo "  - FOLDER_NAME (nom du dossier sur le serveur)"
+    echo "  - SERVER_PORT (port Docker sur le serveur)"
+    echo ""
+    read -p "Voulez-vous éditer .env maintenant ? (o/N) : " EDIT_NOW
+    if [[ "$EDIT_NOW" =~ ^[oOyY]$ ]]; then
+        ${EDITOR:-nano} .env
+    else
+        log_warning "N'oubliez pas d'éditer .env avant de continuer !"
+        exit 0
+    fi
+fi
 
-read -p "🌐 Nom de domaine (ex: myblog.com) : " DOMAIN
+# Charger le fichier .env du projet
+source .env
 
-read -p "🔢 Port local Docker (ex: 8089) : " LOCAL_PORT
-
-read -p "📧 Email administrateur : " ADMIN_EMAIL
-
-read -p "🔐 Mot de passe admin WordPress : " ADMIN_PASSWORD
-
-read -p "📝 Nom du site (affiché sur le site) : " SITE_NAME
-
-read -p "©️  Nom pour le copyright (ex: Mon Entreprise) : " SITE_COPYRIGHT
-
-echo ""
-log_info "=== Informations du serveur ==="
-echo ""
-
-read -p "🖥️  IP ou hostname du serveur : " SERVER_HOST
-
-read -p "👤 Utilisateur SSH : " SERVER_USER
-
-read -p "🔑 Chemin vers la clé SSH (défaut: ~/.ssh/id_rsa) : " SSH_KEY_PATH
-SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
-
-if [ ! -f "$SSH_KEY_PATH" ]; then
-    log_error "Clé SSH non trouvée à $SSH_KEY_PATH"
+# Validation des variables essentielles
+if [ -z "$COMPOSE_PROJECT_NAME" ] || [ -z "$LOCAL_PORT" ] || [ -z "$PROD_URL" ]; then
+    log_error "Variables manquantes dans .env (COMPOSE_PROJECT_NAME, LOCAL_PORT, PROD_URL)"
     exit 1
 fi
 
-read -p "🔢 Port Docker sur le serveur (ex: 8089) : " SERVER_PORT
+# Extraire le nom de domaine depuis PROD_URL
+DOMAIN=$(echo "$PROD_URL" | sed 's|https\?://||' | sed 's|/.*||')
 
 echo ""
-log_info "=== Résumé de la configuration ==="
-echo ""
-echo "Projet         : $PROJECT_NAME"
+log_info "=== Configuration chargée ==="
+echo "Projet         : $COMPOSE_PROJECT_NAME"
 echo "Domaine        : $DOMAIN"
 echo "Port local     : $LOCAL_PORT"
 echo "Port serveur   : $SERVER_PORT"
 echo "Email admin    : $ADMIN_EMAIL"
 echo "Serveur        : $SERVER_USER@$SERVER_HOST"
 echo ""
-read -p "Continuer avec ces informations ? (o/N) : " CONFIRM
-
-if [[ ! "$CONFIRM" =~ ^[oOyY]$ ]]; then
-    log_warning "Annulation de l'initialisation"
-    exit 0
-fi
 
 # ========================================
-# ÉTAPE 2 : Création du fichier .env
+# ÉTAPE 2 : Installation locale WordPress
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 2/7 : Création du fichier .env ==="
-
-cat > .env << EOF
-# ========================================
-# CONFIGURATION DU SITE WORDPRESS
-# ========================================
-
-# === DOCKER & PROJET ===
-COMPOSE_PROJECT_NAME=$PROJECT_NAME
-LOCAL_PORT=$LOCAL_PORT
-
-# === BASE DE DONNÉES ===
-DB_ROOT_PASSWORD=$(openssl rand -base64 16)
-DB_NAME=wordpress
-DB_USER=wp
-DB_PASSWORD=$(openssl rand -base64 16)
-
-# === ADMIN WORDPRESS ===
-ADMIN_USER=admin
-ADMIN_PASSWORD=$ADMIN_PASSWORD
-ADMIN_EMAIL=$ADMIN_EMAIL
-
-# === INFORMATIONS DU SITE ===
-SITE_NAME=$SITE_NAME
-SITE_TITLE=$SITE_NAME
-SITE_DESCRIPTION=Site WordPress $SITE_NAME
-SITE_COPYRIGHT=$SITE_COPYRIGHT
-
-# === URLs ===
-# URL locale pour le développement
-SITE_URL=http://localhost:$LOCAL_PORT
-
-# URL de production
-PROD_URL=https://$DOMAIN
-
-# Nom du dossier sur le serveur de production
-FOLDER_NAME=$PROJECT_NAME
-
-# === SERVEUR (pour scripts de déploiement) ===
-SERVER_HOST=$SERVER_HOST
-SERVER_USER=$SERVER_USER
-SERVER_PORT=$SERVER_PORT
-SSH_KEY_PATH=$SSH_KEY_PATH
-EOF
-
-log_success "Fichier .env créé avec des mots de passe sécurisés"
-
-# ========================================
-# ÉTAPE 3 : Installation locale
-# ========================================
-
-echo ""
-log_info "=== ÉTAPE 3/7 : Installation WordPress en local ==="
+log_info "=== ÉTAPE 2/7 : Installation WordPress en local ==="
 
 if [ -f "./scripts/setup.sh" ]; then
     chmod +x ./scripts/setup.sh
@@ -178,11 +162,11 @@ else
 fi
 
 # ========================================
-# ÉTAPE 4 : Initialisation Git
+# ÉTAPE 3 : Initialisation Git
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 4/7 : Initialisation Git ==="
+log_info "=== ÉTAPE 3/7 : Initialisation Git ==="
 
 cd ..  # Retour à la racine du projet
 
@@ -205,7 +189,7 @@ EOF
 fi
 
 git add .
-git commit -m "Initial commit - $PROJECT_NAME
+git commit -m "Initial commit - $COMPOSE_PROJECT_NAME
 
 Site WordPress initialisé avec :
 - Domaine: $DOMAIN
@@ -217,14 +201,14 @@ Site WordPress initialisé avec :
 log_success "Git initialisé et premier commit créé"
 
 # ========================================
-# ÉTAPE 5 : Création du repository GitHub
+# ÉTAPE 4 : Création du repository GitHub
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 5/7 : Création du repository GitHub privé ==="
+log_info "=== ÉTAPE 4/7 : Création du repository GitHub privé ==="
 
 cd project
-./scripts/create-github-repo.sh "$PROJECT_NAME" "$SERVER_HOST" "$SERVER_USER" "$SSH_KEY_PATH" "$PROJECT_NAME"
+./scripts/create-github-repo.sh "$COMPOSE_PROJECT_NAME" "$SERVER_HOST" "$SERVER_USER" "$SSH_KEY_PATH" "$FOLDER_NAME"
 
 if [ $? -ne 0 ]; then
     log_error "Échec de la création du repository GitHub"
@@ -232,11 +216,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # ========================================
-# ÉTAPE 6 : Déploiement sur le serveur
+# ÉTAPE 5 : Déploiement sur le serveur
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 6/7 : Déploiement sur le serveur ==="
+log_info "=== ÉTAPE 5/7 : Déploiement sur le serveur ==="
 
 ./scripts/deploy-to-server.sh
 
@@ -246,11 +230,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # ========================================
-# ÉTAPE 7 : Finalisation
+# ÉTAPE 6 : Finalisation
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 7/7 : Finalisation ==="
+log_info "=== ÉTAPE 6/7 : Finalisation ==="
 
 log_success "Synchronisation finale..."
 cd ..
@@ -269,7 +253,7 @@ echo ""
 log_success "Site local     : http://localhost:$LOCAL_PORT"
 log_success "Site production: https://$DOMAIN"
 log_success "Admin WP       : https://$DOMAIN/wp-admin"
-log_success "Repository     : https://github.com/$(gh api user -q .login)/$PROJECT_NAME"
+log_success "Repository     : https://github.com/$(gh api user -q .login)/$COMPOSE_PROJECT_NAME"
 echo ""
 log_info "Identifiants admin WordPress :"
 echo "   - Email    : $ADMIN_EMAIL"

@@ -13,7 +13,18 @@ log_success() { echo -e "${GREEN}✅ $1${NC}"; }
 log_error() { echo -e "${RED}❌ $1${NC}"; }
 log_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 
-# Charger les variables .env
+# Charger la configuration serveur globale depuis WP/.env
+WP_ENV_PATH="../../.env"
+if [ ! -f "$WP_ENV_PATH" ]; then
+    log_error "Fichier de configuration serveur manquant : $WP_ENV_PATH"
+    log_error "Copiez ../../.env.sample vers ../../.env et configurez-le"
+    exit 1
+fi
+
+log_info "Chargement de la configuration serveur depuis $WP_ENV_PATH"
+source "$WP_ENV_PATH"
+
+# Charger les variables .env du projet
 if [ ! -f ".env" ]; then
     log_error "Fichier .env non trouvé !"
     exit 1
@@ -22,15 +33,14 @@ fi
 source .env
 
 # Vérifier les variables nécessaires
-if [ -z "$PROJECT_NAME" ] || [ -z "$PROD_URL" ] || [ -z "$SERVER_HOST" ] || [ -z "$SERVER_USER" ]; then
-    log_error "Variables manquantes dans .env (PROJECT_NAME, PROD_URL, SERVER_HOST, SERVER_USER)"
+if [ -z "$COMPOSE_PROJECT_NAME" ] || [ -z "$PROD_URL" ] || [ -z "$SERVER_HOST" ] || [ -z "$SERVER_USER" ]; then
+    log_error "Variables manquantes (COMPOSE_PROJECT_NAME, PROD_URL, SERVER_HOST, SERVER_USER)"
+    log_error "Vérifiez les fichiers .env et ../../.env"
     exit 1
 fi
 
-COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-$PROJECT_NAME}
 FOLDER_NAME=${FOLDER_NAME:-$COMPOSE_PROJECT_NAME}
 SERVER_PORT=${SERVER_PORT:-$LOCAL_PORT}
-SSH_KEY_PATH=${SSH_KEY_PATH:-~/.ssh/id_rsa}
 DOMAIN=$(echo "$PROD_URL" | sed -e 's|^https\?://||' -e 's|/.*$||')
 
 log_info "Déploiement de $COMPOSE_PROJECT_NAME sur $SERVER_HOST"
