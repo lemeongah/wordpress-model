@@ -1,16 +1,17 @@
 #!/bin/bash
 set -e
-CATEGORIES=(
-  "social-trends|Tendances Social Media"
-  "strategies| Stratégies pour Performer"
-  "tools|Outils & IA"
-)
-
-
 
 cd "$(dirname "$0")/.."
 
 source .env
+
+# Catégories par défaut si non définies dans .env
+if [ -z "$CATEGORIES" ]; then
+  CATEGORIES="social-trends|Tendances Social Media strategies|Stratégies pour Performer tools|Outils & IA"
+fi
+
+# Convertir la chaîne CATEGORIES en tableau
+IFS=' ' read -ra CATEGORIES_ARRAY <<< "$CATEGORIES"
 export WP_CLI_PHP_ARGS='-d memory_limit=512M'
 
 ENVIRONMENT="${ENV:-$( [[ "$SITE_URL" == *"localhost"* ]] && echo "local" || echo "prod" )}"
@@ -255,7 +256,7 @@ wpcli menu location assign "Menu Principal" primary
 
 # Création des catégories et des pages liées
 
-for entry in "${CATEGORIES[@]}"; do
+for entry in "${CATEGORIES_ARRAY[@]}"; do
   IFS="|" read -r slug label <<< "$entry"
 
   wpcli term create category "$label" --slug="$slug" 2>/dev/null || true
