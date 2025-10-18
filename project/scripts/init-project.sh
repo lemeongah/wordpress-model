@@ -83,15 +83,115 @@ fi
 # Charger le fichier .env du projet
 source .env
 
-# Validation des variables essentielles
-if [ -z "$COMPOSE_PROJECT_NAME" ] || [ -z "$LOCAL_PORT" ] || [ -z "$PROD_URL" ]; then
-    log_error "Variables manquantes dans .env (COMPOSE_PROJECT_NAME, LOCAL_PORT, PROD_URL)"
-    log_error "Vérifiez que vous avez bien configuré toutes les variables dans .env"
+# Validation des 5 variables essentielles
+if [ -z "$COMPOSE_PROJECT_NAME" ] || [ -z "$LOCAL_PORT" ] || [ -z "$PROD_URL" ] || [ -z "$ADMIN_EMAIL" ] || [ -z "$ADMIN_PASSWORD" ]; then
+    log_error "Variables manquantes dans .env !"
+    log_error "Les 5 variables obligatoires sont :"
+    log_error "  - COMPOSE_PROJECT_NAME"
+    log_error "  - LOCAL_PORT"
+    log_error "  - PROD_URL"
+    log_error "  - ADMIN_EMAIL"
+    log_error "  - ADMIN_PASSWORD"
     exit 1
 fi
 
 # Extraire le nom de domaine depuis PROD_URL
 DOMAIN=$(echo "$PROD_URL" | sed 's|https\?://||' | sed 's|/.*||')
+
+# Auto-générer les valeurs manquantes
+log_info "Génération automatique des valeurs manquantes..."
+
+# Générer les mots de passe DB s'ils sont vides
+if [ -z "$DB_ROOT_PASSWORD" ]; then
+    DB_ROOT_PASSWORD=$(openssl rand -base64 16)
+    log_success "DB_ROOT_PASSWORD généré"
+fi
+
+if [ -z "$DB_PASSWORD" ]; then
+    DB_PASSWORD=$(openssl rand -base64 16)
+    log_success "DB_PASSWORD généré"
+fi
+
+# Déduire SERVER_PORT de LOCAL_PORT s'il est vide
+if [ -z "$SERVER_PORT" ]; then
+    SERVER_PORT=$LOCAL_PORT
+    log_success "SERVER_PORT = $LOCAL_PORT"
+fi
+
+# Déduire FOLDER_NAME de COMPOSE_PROJECT_NAME s'il est vide
+if [ -z "$FOLDER_NAME" ]; then
+    FOLDER_NAME=$COMPOSE_PROJECT_NAME
+    log_success "FOLDER_NAME = $COMPOSE_PROJECT_NAME"
+fi
+
+# Déduire SITE_URL de LOCAL_PORT s'il est vide
+if [ -z "$SITE_URL" ]; then
+    SITE_URL="http://localhost:$LOCAL_PORT"
+    log_success "SITE_URL = $SITE_URL"
+fi
+
+# Déduire SITE_NAME du domaine s'il est vide
+if [ -z "$SITE_NAME" ]; then
+    # Convertir "lesplusbeauxprenoms.com" en "Les Plus Beaux Prenoms"
+    SITE_NAME=$(echo "$DOMAIN" | sed 's/\..*//' | sed 's/-/ /g' | sed 's/\b\(.\)/\u\1/g')
+    log_success "SITE_NAME = $SITE_NAME"
+fi
+
+# Déduire SITE_TITLE de SITE_NAME s'il est vide
+if [ -z "$SITE_TITLE" ]; then
+    SITE_TITLE="$SITE_NAME"
+    log_success "SITE_TITLE = $SITE_TITLE"
+fi
+
+# Déduire SITE_COPYRIGHT du domaine s'il est vide
+if [ -z "$SITE_COPYRIGHT" ]; then
+    SITE_COPYRIGHT="$DOMAIN"
+    log_success "SITE_COPYRIGHT = $DOMAIN"
+fi
+
+# Déduire SITE_DESCRIPTION s'il est vide
+if [ -z "$SITE_DESCRIPTION" ]; then
+    SITE_DESCRIPTION="$SITE_NAME"
+    log_success "SITE_DESCRIPTION = $SITE_NAME"
+fi
+
+# Écrire les valeurs générées dans le .env
+cat > .env << EOF
+# ========================================
+# CONFIGURATION DU SITE WORDPRESS
+# ========================================
+# Généré automatiquement par init-project.sh
+
+# === CONFIGURATION PRINCIPALE ===
+COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME
+LOCAL_PORT=$LOCAL_PORT
+PROD_URL=$PROD_URL
+ADMIN_EMAIL=$ADMIN_EMAIL
+ADMIN_PASSWORD=$ADMIN_PASSWORD
+
+# === BASE DE DONNÉES ===
+DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
+DB_PASSWORD=$DB_PASSWORD
+DB_NAME=${DB_NAME:-wordpress}
+DB_USER=${DB_USER:-wp}
+ADMIN_USER=${ADMIN_USER:-admin}
+
+# === INFORMATIONS DU SITE ===
+SITE_NAME=$SITE_NAME
+SITE_TITLE=$SITE_TITLE
+SITE_DESCRIPTION=$SITE_DESCRIPTION
+SITE_COPYRIGHT=$SITE_COPYRIGHT
+
+# === URLs ET DÉPLOIEMENT ===
+SITE_URL=$SITE_URL
+SERVER_PORT=$SERVER_PORT
+FOLDER_NAME=$FOLDER_NAME
+EOF
+
+log_success "Fichier .env mis à jour avec les valeurs générées"
+
+# Recharger le .env mis à jour
+source .env
 
 echo ""
 log_success "Configuration chargée avec succès"
