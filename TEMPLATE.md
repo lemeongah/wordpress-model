@@ -17,6 +17,7 @@ Ce repository est conçu pour être utilisé comme template GitHub afin de crée
 
 ```bash
 gh repo create monsite --template gillesah/wordpress-template --private
+gh repo create lesplusbeauxprenoms --template gillesah/wordpress-template --private
 cd monsite
 ```
 

@@ -103,7 +103,21 @@ echo "require_once ABSPATH . 'wp-settings.php';" | sudo tee -a wp/wp-config.php 
 
 echo "🚀 Lancement des containers..."
 docker compose up -d
-sleep 20
+
+echo "⏳ Attente de la base de données..."
+# Attendre que la base de données soit prête (max 60 secondes)
+for i in {1..30}; do
+  if docker compose exec -T db mysql -u"$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1" &>/dev/null; then
+    echo "✅ Base de données prête après $((i*2)) secondes"
+    break
+  fi
+  if [ $i -eq 30 ]; then
+    echo "❌ Timeout : la base de données n'est pas prête après 60 secondes"
+    echo "Vérifiez les logs avec : docker compose logs db"
+    exit 1
+  fi
+  sleep 2
+done
 
 wpcli() { docker compose run --rm -v "$(pwd)/wp:/var/www/html" wpcli "$@"; }
 
