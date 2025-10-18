@@ -62,64 +62,22 @@ fi
 log_success "Toutes les dépendances sont installées"
 
 # ========================================
-# ÉTAPE 1 : Copie du fichier .env depuis le template
+# ÉTAPE 1 : Vérification du fichier .env
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 1/7 : Création du fichier .env depuis .env.sample ==="
+log_info "=== ÉTAPE 1/6 : Vérification de la configuration ==="
 
-if [ -f ".env" ]; then
-    log_warning "Fichier .env existant trouvé"
-    read -p "Écraser le fichier .env existant ? (o/N) : " OVERWRITE
-    if [[ ! "$OVERWRITE" =~ ^[oOyY]$ ]]; then
-        log_info "Conservation du fichier .env existant"
-    else
-        cp .env.sample .env
-        log_success "Fichier .env créé depuis .env.sample"
-        log_warning "⚠️  IMPORTANT : Éditez maintenant le fichier .env pour configurer votre site"
-        echo ""
-        echo "Valeurs à modifier dans .env :"
-        echo "  - COMPOSE_PROJECT_NAME (nom unique du projet)"
-        echo "  - LOCAL_PORT (port Docker local, ex: 8089)"
-        echo "  - ADMIN_PASSWORD (mot de passe admin WordPress)"
-        echo "  - ADMIN_EMAIL (email admin)"
-        echo "  - SITE_NAME (nom du site)"
-        echo "  - SITE_COPYRIGHT (copyright footer)"
-        echo "  - PROD_URL (URL de production, ex: https://monsite.com)"
-        echo "  - FOLDER_NAME (nom du dossier sur le serveur)"
-        echo "  - SERVER_PORT (port Docker sur le serveur)"
-        echo ""
-        read -p "Voulez-vous éditer .env maintenant ? (o/N) : " EDIT_NOW
-        if [[ "$EDIT_NOW" =~ ^[oOyY]$ ]]; then
-            ${EDITOR:-nano} .env
-        else
-            log_warning "N'oubliez pas d'éditer .env avant de continuer !"
-            exit 0
-        fi
-    fi
-else
-    cp .env.sample .env
-    log_success "Fichier .env créé depuis .env.sample"
-    log_warning "⚠️  IMPORTANT : Éditez maintenant le fichier .env pour configurer votre site"
+if [ ! -f ".env" ]; then
+    log_error "Fichier .env non trouvé !"
     echo ""
-    echo "Valeurs à modifier dans .env :"
-    echo "  - COMPOSE_PROJECT_NAME (nom unique du projet)"
-    echo "  - LOCAL_PORT (port Docker local, ex: 8089)"
-    echo "  - ADMIN_PASSWORD (mot de passe admin WordPress)"
-    echo "  - ADMIN_EMAIL (email admin)"
-    echo "  - SITE_NAME (nom du site)"
-    echo "  - SITE_COPYRIGHT (copyright footer)"
-    echo "  - PROD_URL (URL de production, ex: https://monsite.com)"
-    echo "  - FOLDER_NAME (nom du dossier sur le serveur)"
-    echo "  - SERVER_PORT (port Docker sur le serveur)"
+    echo "⚠️  Vous devez créer le fichier .env avant de lancer ce script :"
     echo ""
-    read -p "Voulez-vous éditer .env maintenant ? (o/N) : " EDIT_NOW
-    if [[ "$EDIT_NOW" =~ ^[oOyY]$ ]]; then
-        ${EDITOR:-nano} .env
-    else
-        log_warning "N'oubliez pas d'éditer .env avant de continuer !"
-        exit 0
-    fi
+    echo "  1. cp .env.sample .env"
+    echo "  2. nano .env  # Éditez les valeurs selon votre site"
+    echo "  3. ./scripts/init-project.sh"
+    echo ""
+    exit 1
 fi
 
 # Charger le fichier .env du projet
@@ -128,6 +86,7 @@ source .env
 # Validation des variables essentielles
 if [ -z "$COMPOSE_PROJECT_NAME" ] || [ -z "$LOCAL_PORT" ] || [ -z "$PROD_URL" ]; then
     log_error "Variables manquantes dans .env (COMPOSE_PROJECT_NAME, LOCAL_PORT, PROD_URL)"
+    log_error "Vérifiez que vous avez bien configuré toutes les variables dans .env"
     exit 1
 fi
 
@@ -135,7 +94,8 @@ fi
 DOMAIN=$(echo "$PROD_URL" | sed 's|https\?://||' | sed 's|/.*||')
 
 echo ""
-log_info "=== Configuration chargée ==="
+log_success "Configuration chargée avec succès"
+echo ""
 echo "Projet         : $COMPOSE_PROJECT_NAME"
 echo "Domaine        : $DOMAIN"
 echo "Port local     : $LOCAL_PORT"
@@ -143,6 +103,11 @@ echo "Port serveur   : $SERVER_PORT"
 echo "Email admin    : $ADMIN_EMAIL"
 echo "Serveur        : $SERVER_USER@$SERVER_HOST"
 echo ""
+read -p "Continuer avec cette configuration ? (O/n) : " CONFIRM
+if [[ "$CONFIRM" =~ ^[nN]$ ]]; then
+    log_warning "Annulation. Éditez .env et relancez le script."
+    exit 0
+fi
 
 # ========================================
 # ÉTAPE 2 : Installation locale WordPress
@@ -166,7 +131,7 @@ fi
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 3/7 : Initialisation Git ==="
+log_info "=== ÉTAPE 3/6 : Initialisation Git ==="
 
 cd ..  # Retour à la racine du projet
 
@@ -205,7 +170,7 @@ log_success "Git initialisé et premier commit créé"
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 4/7 : Création du repository GitHub privé ==="
+log_info "=== ÉTAPE 4/6 : Création du repository GitHub privé ==="
 
 cd project
 ./scripts/create-github-repo.sh "$COMPOSE_PROJECT_NAME" "$SERVER_HOST" "$SERVER_USER" "$SSH_KEY_PATH" "$FOLDER_NAME"
@@ -220,7 +185,7 @@ fi
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 5/7 : Déploiement sur le serveur ==="
+log_info "=== ÉTAPE 5/6 : Déploiement sur le serveur ==="
 
 ./scripts/deploy-to-server.sh
 
@@ -234,7 +199,7 @@ fi
 # ========================================
 
 echo ""
-log_info "=== ÉTAPE 6/7 : Finalisation ==="
+log_info "=== ÉTAPE 6/6 : Finalisation ==="
 
 log_success "Synchronisation finale..."
 cd ..
