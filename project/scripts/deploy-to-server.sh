@@ -167,7 +167,7 @@ log_success "Configuration .env transférée"
 
 log_info "Installation de WordPress sur le serveur... (cela peut prendre quelques minutes)"
 
-ssh -i "$SSH_KEY_PATH" "$SERVER_USER@$SERVER_HOST" << 'ENDSSH'
+ssh -i "$SSH_KEY_PATH" "$SERVER_USER@$SERVER_HOST" << ENDSSH
 set -e
 
 cd /var/www/$FOLDER_NAME/project
