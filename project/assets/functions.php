@@ -259,6 +259,35 @@ function add_mosaic_click_handler() {
     <?php
 }
 
+// ========================================
+// GOOGLE ANALYTICS (GTAG)
+// ========================================
+// Configuration: Ajouter GTAG_ID dans votre fichier .env
+// Exemple: GTAG_ID=G-XXXXXXXXXX
+function add_google_analytics()
+{
+    // Récupérer l'ID de mesure depuis la variable d'environnement
+    $measurement_id = getenv('GTAG_ID') ?: '';
+
+    // Ne charger gtag que si un ID est fourni
+    if (empty($measurement_id)) {
+        return;
+    }
+
+    ?>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo esc_attr($measurement_id); ?>"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', '<?php echo esc_js($measurement_id); ?>');
+    </script>
+    <?php
+}
+add_action('wp_head', 'add_google_analytics');
+
 // Ajouter le favicon avec la bonne URL selon l'environnement
 function add_favicon()
 {
