@@ -30,12 +30,19 @@ jobs:
             mkdir -p "$DEPLOY_DIR"
             cd "$DEPLOY_DIR"
 
-            # Initialize git repo if needed (première déploiement)
-            if [ ! -d .git ]; then
-              echo "📥 Initialisation du repository..."
-              git init
-              git remote add origin git@github.com:${{ github.repository }}.git
+            # Clean up .git if it exists and has permission issues
+            if [ -d .git ]; then
+              echo "🧹 Nettoyage du répertoire .git existant..."
+              rm -rf .git 2>/dev/null || {
+                echo "⚠️  Impossible de supprimer .git directement, recréation du repo..."
+                rm -rf .git
+              }
             fi
+
+            # Initialize git repo (fresh)
+            echo "📥 Initialisation du repository..."
+            git init
+            git remote add origin git@github.com:${{ github.repository }}.git
 
             echo "🔄 Synchronisation du code depuis GitHub..."
             git fetch origin main 2>&1 || {
