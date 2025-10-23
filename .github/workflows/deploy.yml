@@ -23,6 +23,13 @@ jobs:
             set -e
             cd /var/www/${{ secrets.FOLDER_NAME }}/
 
+            echo "🔐 Correction des permissions Git avant synchronisation..."
+            if [ -d .git ]; then
+              sudo chown -R ${{ secrets.SERVER_USER }}:${{ secrets.SERVER_USER }} .git
+              sudo chmod -R u+rwx .git
+              echo "✅ Permissions Git corrigées"
+            fi
+
             echo "🔍 Nettoyage des modifications locales..."
             git fetch origin
             git reset --hard origin/main
