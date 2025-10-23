@@ -153,21 +153,53 @@ Correction manuelle des permissions si nécessaire :
 5. Déploiement réussit
 ```
 
+## Configuration du Serveur (REQUIS)
+
+**AVANT de lancer les déploiements avec GitHub Actions**, le serveur doit avoir une configuration sudoers pour permettre au user `deploy` d'exécuter certaines commandes sans mot de passe.
+
+### Configuration initiale (UNE FOIS sur le serveur)
+
+Exécutez ce script avec accès `sudo` sur le serveur de production :
+
+```bash
+# Télécharger le script
+curl -s https://raw.githubusercontent.com/gillesah/wordpress-model/main/project/scripts/setup-sudoers.sh -o /tmp/setup-sudoers.sh
+chmod +x /tmp/setup-sudoers.sh
+
+# Exécuter
+sudo /tmp/setup-sudoers.sh
+```
+
+Le script configure sudoers pour :
+- `rm -rf .git` (nettoyage Git)
+- `chown` / `chmod` (corrections de permissions)
+- `docker compose` (opérations Docker)
+- `mkdir` (création de répertoires)
+
+Sans cette configuration, les déploiements échoueront avec `"sudo: a terminal is required"`.
+
 ## Intégration dans les Projets Existants
 
 ### Pour bskyblog (déjà déployé)
 
-Exécuter une fois pour corriger :
+1. **D'abord**, configurer sudoers :
+```bash
+ssh root@193.203.169.72
+/tmp/setup-sudoers.sh  # Exécuter sur le serveur
+```
 
+2. **Ensuite**, corriger les permissions existantes :
 ```bash
 ssh deploy@193.203.169.72 << 'EOF'
 cd /var/www/bskyblog
-sudo chown -R deploy:deploy .git
-sudo chmod -R u+rwx .git
-sudo chown -R 33:33 project/wp/
-sudo find project/wp/ -type d -exec chmod 755 {} \;
-sudo find project/wp/ -type f -exec chmod 644 {} \;
-echo "✅ Permissions corrigées"
+sudo rm -rf .git
+git init
+git remote add origin https://github.com/gillesah/bskyblog.git
+git config user.email "deploy@server"
+git config user.name "Deploy User"
+git fetch origin main
+git reset --hard origin/main
+echo "✅ Repository Git réinitialisé"
 EOF
 ```
 
@@ -176,6 +208,7 @@ EOF
 Les permissions seront correctes automatiquement grâce à :
 1. `setup.sh` avec la nouvelle fonction `fix_permissions()`
 2. `deploy-to-server.sh` avec l'Étape 5.5
+3. **À condition que sudoers soit configuré** (voir section Configuration du Serveur)
 
 ## Tests de Validation
 
