@@ -38,10 +38,10 @@ if git remote get-url origin &> /dev/null; then
     REPO_URL=$(git remote get-url origin)
     log_info "Repository existant : $REPO_URL"
 else
-    # Créer le repository GitHub
-    log_info "Création du repository GitHub privé..."
+    # Créer le repository GitHub dans l'organization lemeongah
+    log_info "Création du repository GitHub dans l'organization lemeongah..."
 
-    gh repo create "$PROJECT_NAME" \
+    gh repo create "lemeongah/$PROJECT_NAME" \
         --private \
         --source=. \
         --remote=origin \
@@ -49,40 +49,20 @@ else
         --push
 
     if [ $? -eq 0 ]; then
-        log_success "Repository GitHub créé et code poussé"
+        log_success "Repository GitHub créé sous lemeongah et code poussé"
     else
         log_error "Échec de la création du repository"
         exit 1
     fi
 fi
 
-# Configurer les secrets GitHub Actions
-log_info "Configuration des secrets GitHub Actions..."
-
-# Secret 1: SERVER_HOST
-echo "$SERVER_HOST" | gh secret set SERVER_HOST
-log_success "Secret SERVER_HOST configuré"
-
-# Secret 2: SERVER_USER
-echo "$SERVER_USER" | gh secret set SERVER_USER
-log_success "Secret SERVER_USER configuré"
-
-# Secret 3: SERVER_SSH_KEY (contenu de la clé privée)
-if [ -f "$SSH_KEY_PATH" ]; then
-    gh secret set SERVER_SSH_KEY < "$SSH_KEY_PATH"
-    log_success "Secret SERVER_SSH_KEY configuré"
-else
-    log_error "Clé SSH non trouvée à $SSH_KEY_PATH"
-    exit 1
-fi
-
-# Secret 4: FOLDER_NAME
-echo "$FOLDER_NAME" | gh secret set FOLDER_NAME
-log_success "Secret FOLDER_NAME configuré"
-
-# Vérifier les secrets
-log_info "Vérification des secrets configurés..."
-gh secret list
+# ✅ Les secrets sont maintenant au niveau de l'organization
+log_info "✅ Les secrets GitHub Actions sont configurés au niveau de l'organization lemeongah :"
+log_info "   - SERVER_HOST"
+log_info "   - GILLESAH_SSH_KEY"
+log_info ""
+log_info "Ces secrets sont accessibles automatiquement pour tous les repos de l'orga."
+log_info "Aucune configuration de secrets par repo n'est nécessaire."
 
 log_success "Repository GitHub configuré avec succès !"
 echo ""
