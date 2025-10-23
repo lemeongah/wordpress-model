@@ -21,16 +21,21 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
-            cd /var/www/${{ secrets.FOLDER_NAME }}/
 
-            echo "🔄 Synchronisation du code..."
+            # Déterminer le FOLDER_NAME depuis le repository name
+            REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+            DEPLOY_DIR="/var/www/$REPO_NAME"
+
+            cd "$DEPLOY_DIR"
+
+            echo "🔄 Synchronisation du code depuis GitHub..."
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
 
-            echo "🚀 Redémarrage des services..."
+            echo "🚀 Redémarrage des services Docker..."
             cd project/
             docker compose down || true
             docker compose up -d --build
 
-            echo "✅ Déploiement terminé"
+            echo "✅ Déploiement terminé pour $REPO_NAME"
