@@ -184,6 +184,34 @@ ENDSSH
 log_success "WordPress installé et configuré sur le serveur"
 
 # ========================================
+# ÉTAPE 5.5 : Correction des permissions serveur
+# ========================================
+
+log_info "Correction des permissions sur le serveur pour déploiement continu..."
+
+ssh -i "$SSH_KEY_PATH" "$SERVER_USER@$SERVER_HOST" << ENDSSH
+set -e
+
+cd /var/www/$FOLDER_NAME
+
+echo "🔐 Correction de la propriété et permissions de Git..."
+sudo chown -R $SERVER_USER:$SERVER_USER .git
+sudo chmod -R u+rwx .git
+
+echo "🔐 Correction de la propriété et permissions du code..."
+sudo chown -R $SERVER_USER:$SERVER_USER .
+
+echo "🔐 Correction des permissions Docker..."
+sudo chown -R 33:33 project/wp/
+sudo find project/wp/ -type d -exec chmod 755 {} \;
+sudo find project/wp/ -type f -exec chmod 644 {} \;
+
+echo "✅ Permissions Docker finalisées"
+ENDSSH
+
+log_success "Permissions serveur corrigées"
+
+# ========================================
 # ÉTAPE 6 : Configuration Nginx
 # ========================================
 

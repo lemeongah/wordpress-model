@@ -23,6 +23,24 @@ if [[ "$1" == "--reset" ]]; then
   RESET_DB=true
 fi
 
+# ========================================
+# FONCTION DE GESTION DES PERMISSIONS
+# ========================================
+
+fix_permissions() {
+    local target_dir="$1"
+    local description="${2:-Permission fix}"
+
+    if [ ! -d "$target_dir" ]; then
+        return 0
+    fi
+
+    echo "🔐 $description : $target_dir"
+    sudo chown -R 33:33 "$target_dir"
+    sudo find "$target_dir" -type d -exec chmod 755 {} \;
+    sudo find "$target_dir" -type f -exec chmod 644 {} \;
+}
+
 echo "🧼 Nettoyage containers..."
 docker compose down || true
 
@@ -44,16 +62,11 @@ wget https://wordpress.org/latest.tar.gz -O tmp_wordpress/latest.tar.gz
 tar -xzf tmp_wordpress/latest.tar.gz --strip-components=1 -C wp
 rm -rf tmp_wordpress
 
-echo "🔐 Permissions initiales sur wp/"
-sudo chown -R 33:33 wp
-sudo find wp -type d -exec chmod 755 {} \;
-sudo find wp -type f -exec chmod 644 {} \;
-
-echo "📁 wp-content/upgrade"
+# Permissions initiales sur WordPress
+fix_permissions "wp" "Permissions initiales WordPress"
+fix_permissions "wp/wp-content" "Permissions wp-content"
 sudo mkdir -p wp/wp-content/upgrade
-sudo chown -R 33:33 wp/wp-content
-sudo find wp/wp-content -type d -exec chmod 755 {} \;
-sudo find wp/wp-content -type f -exec chmod 644 {} \;
+fix_permissions "wp/wp-content/upgrade" "Permissions wp-content/upgrade"
 
 echo "⚙️ Création de wp-config.php..."
 cat << EOF | sudo tee wp/wp-config.php > /dev/null
@@ -160,93 +173,46 @@ wpcli option update WPLANG fr_FR
 
 echo "🎨 Installation du thème GeneratePress..."
 wget -qO generatepress.zip https://downloads.wordpress.org/theme/generatepress.3.5.1.zip
-echo "🔧 Correction des permissions du dossier themes..."
 sudo mkdir -p wp/wp-content/themes
-sudo chown -R $USER:$USER wp/wp-content/themes
-sudo chmod -R 755 wp/wp-content/themes
 unzip -q generatepress.zip -d wp/wp-content/themes/
 rm generatepress.zip
-sudo chown -R 33:33 wp/wp-content/themes/generatepress
-sudo find wp/wp-content/themes/generatepress -type d -exec chmod 755 {} \;
-sudo find wp/wp-content/themes/generatepress -type f -exec chmod 644 {} \;
+fix_permissions "wp/wp-content/themes/generatepress" "Permissions GeneratePress"
 
 echo "👶 Génération du thème enfant depuis assets/..."
 CHILD_DIR="wp/wp-content/themes/generatepress-child"
 rm -rf "$CHILD_DIR"
 mkdir -p "$CHILD_DIR"
 
-# Copier uniquement ce qui existe
-cp ./assets/functions.php "$CHILD_DIR/functions.php" || echo "⚠️ functions.php non trouvé"
-cp ./assets/footer.html "$CHILD_DIR/footer.html" || echo "ℹ️ footer.html pas obligatoire"
+# Copier les fichiers du thème enfant
+cp ./assets/functions.php "$CHILD_DIR/functions.php" 2>/dev/null || echo "⚠️ functions.php non trouvé"
+cp ./assets/style.css "$CHILD_DIR/style.css" 2>/dev/null || echo "⚠️ style.css non trouvé"
 
-# Génération du style.css
-cat << 'EOF' > "$CHILD_DIR/style.css"
+# Créer style.css s'il n'existe pas
+if [ ! -f "$CHILD_DIR/style.css" ]; then
+    cat << 'EOF' > "$CHILD_DIR/style.css"
 /*
 Theme Name: GeneratePress Child
 Template: generatepress
 Version: 1.0
 */
 EOF
+fi
 
-# Permissions
-sudo chown -R 33:33 "$CHILD_DIR"
-sudo find "$CHILD_DIR" -type d -exec chmod 755 {} \;
-sudo find "$CHILD_DIR" -type f -exec chmod 644 {} \;
-
-# Activation
-wpcli theme activate generatepress-child
-
-
-# Activer le thème enfant
-wpcli theme activate generatepress-child
-echo "👶 Thème enfant..."
-mkdir -p wp/wp-content/themes/generatepress-child
-sudo mkdir -p wp/wp-content/themes/generatepress-child
-sudo chown -R $USER:$USER wp/wp-content/themes/generatepress-child
-sudo chmod -R 755 wp/wp-content/themes/generatepress-child
-echo "👶 Génération du thème enfant depuis assets/..."
-CHILD_DIR="wp/wp-content/themes/generatepress-child"
-rm -rf "$CHILD_DIR"
-mkdir -p "$CHILD_DIR"
-
-cp ./assets/functions.php "$CHILD_DIR/functions.php"
-cp ./assets/style.css "$CHILD_DIR/style.css"
-# cp ./assets/functions.php wp/wp-content/themes/generatepress-child/functions.php
-cat << 'EOF' > wp/wp-content/themes/generatepress-child/style.css
-/*
-Theme Name: GeneratePress Child
-Template: generatepress
-Version: 1.0
-*/
-EOF
-sudo chown -R 33:33 wp/wp-content/themes/generatepress-child
-sudo mkdir -p wp/wp-content/themes/generatepress-child
-sudo chown -R $USER:$USER wp/wp-content/themes/generatepress-child
-sudo chmod -R 755 wp/wp-content/themes/generatepress-child
+fix_permissions "$CHILD_DIR" "Permissions thème enfant"
 wpcli theme activate generatepress-child
 
 echo "🖼️ Copie des assets..."
 sudo mkdir -p wp/wp-content/uploads/custom/css
-sudo chown -R $USER:$USER wp/wp-content/uploads/custom
-cp -r ./assets/* wp/wp-content/uploads/custom/
-cp ./assets/style.css wp/wp-content/uploads/custom/css/styles.css
-sudo chown -R 33:33 wp/wp-content/uploads/custom
-sudo find wp/wp-content/uploads/custom -type d -exec chmod 755 {} \;
-sudo find wp/wp-content/uploads/custom -type f -exec chmod 644 {} \;
-sudo chown -R 33:33 wp/wp-content/uploads/custom/css
-sudo find wp/wp-content/uploads/custom/css -type d -exec chmod 755 {} \;
-sudo find wp/wp-content/uploads/custom/css -type f -exec chmod 644 {} \;
+cp -r ./assets/* wp/wp-content/uploads/custom/ 2>/dev/null || true
+cp ./assets/style.css wp/wp-content/uploads/custom/css/styles.css 2>/dev/null || true
+fix_permissions "wp/wp-content/uploads/custom" "Permissions assets"
+
 echo "🔁 Permaliens..."
 wpcli rewrite structure "/%postname%/"
 wpcli rewrite flush --hard
 
-
-
-echo "le logo"
-echo "✅ Fix des permissions avant import du logo..."
-sudo chown -R 33:33 wp/wp-content/uploads
-sudo find wp/wp-content/uploads -type d -exec chmod 755 {} \;
-sudo find wp/wp-content/uploads -type f -exec chmod 644 {} \;
+echo "✅ Permissions avant import du logo..."
+fix_permissions "wp/wp-content/uploads" "Permissions uploads"
 
 # Ajouter le logo du site
 LOGO_ID=$(wpcli media import /assets/logo.png --title="Logo" --porcelain)
@@ -327,17 +293,13 @@ wpcli option update page_on_front "$HOME_ID"
 
 
 echo "🛠️ Fixe final des permissions..."
-sudo chown -R 33:33 wp
-sudo find wp -type d -exec chmod 755 {} \;
-sudo find wp -type f -exec chmod 644 {} \;
+fix_permissions "wp" "Permissions finales WordPress"
 
-echo "🔍 🔐 Audit des permissions finales (debug) :"
-echo "➡️ wp-content permissions"
-ls -l wp/wp-content | grep -E 'themes|uploads|upgrade'
-echo "➡️ generatepress/"
-ls -l wp/wp-content/themes/generatepress | head
-echo "➡️ uploads/custom/"
-ls -l wp/wp-content/uploads/custom | head
+echo "🔍 🔐 Audit des permissions finales :"
+echo "➡️ wp/ owner: $(ls -ld wp | awk '{print $3":"$4}')"
+echo "➡️ wp-content/ owner: $(ls -ld wp/wp-content | awk '{print $3":"$4}')"
+echo "➡️ wp/wp-content/themes/ owner: $(ls -ld wp/wp-content/themes | awk '{print $3":"$4}')"
+echo "➡️ wp/wp-content/uploads/ owner: $(ls -ld wp/wp-content/uploads | awk '{print $3":"$4}')"
 
 docker compose restart
 echo "✅ Site opérationnel : $SITE_URL"
