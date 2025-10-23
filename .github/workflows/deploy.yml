@@ -23,15 +23,16 @@ jobs:
             set -e
             cd /var/www/${{ secrets.FOLDER_NAME }}/
 
-            echo "🔐 Correction des permissions Git avant synchronisation..."
-            if [ -d .git ]; then
-              sudo -n chown -R ${{ secrets.SERVER_USER }}:${{ secrets.SERVER_USER }} .git 2>/dev/null || true
-              sudo -n chmod -R u+rwx .git 2>/dev/null || true
-              echo "✅ Permissions Git corrigées"
-            fi
+            echo "🔐 Reconstruction du repository Git..."
+            # Recréer le repo Git avec les bonnes permissions
+            rm -rf .git
+            git init
+            git remote add origin https://github.com/${{ github.repository }}.git
+            git config user.email "deploy@server"
+            git config user.name "Deploy User"
 
-            echo "🔍 Nettoyage des modifications locales..."
-            git fetch origin
+            echo "🔍 Synchronisation avec GitHub..."
+            git fetch origin main
             git reset --hard origin/main
             git clean -fd
 
