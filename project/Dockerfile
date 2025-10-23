@@ -16,7 +16,7 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install zip
 
 # Increase PHP upload limits
-RUN echo -e 'upload_max_filesize = 64M\npost_max_size = 64M\nmemory_limit = 256M' > /usr/local/etc/php/conf.d/uploads.ini
+RUN printf 'upload_max_filesize = 64M\npost_max_size = 64M\nmemory_limit = 256M\n' > /usr/local/etc/php/conf.d/uploads.ini
 
 # Enable necessary Apache modules
 RUN a2enmod rewrite headers
