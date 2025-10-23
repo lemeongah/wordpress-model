@@ -25,35 +25,42 @@ jobs:
             # Déterminer le FOLDER_NAME depuis le repository name
             REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
             DEPLOY_DIR="/var/www/$REPO_NAME"
+            TEMP_DIR="/tmp/deploy_$REPO_NAME"
 
-            echo "📦 Préparation du répertoire..."
+            echo "📦 Préparation du déploiement..."
             mkdir -p "$DEPLOY_DIR"
-            cd "$DEPLOY_DIR"
 
-            # Nettoyer et réinitialiser le git si problèmes de permissions
-            if [ -d .git ]; then
-              echo "🔄 Repository existe, nettoyage..."
-              rm -rf .git || true
+            # Cloner dans un répertoire temporaire propre
+            rm -rf "$TEMP_DIR" 2>/dev/null || true
+            mkdir -p "$TEMP_DIR"
+
+            echo "📥 Clonage du repository..."
+            git clone https://github.com/${{ github.repository }}.git "$TEMP_DIR"
+
+            # Backup du dossier de données si existant
+            if [ -d "$DEPLOY_DIR/project/wp-content/uploads" ]; then
+              echo "💾 Backup des uploads..."
+              mkdir -p "$TEMP_DIR/project/wp-content/"
+              cp -r "$DEPLOY_DIR/project/wp-content/uploads" "$TEMP_DIR/project/wp-content/" 2>/dev/null || true
             fi
 
-            # Clone frais depuis GitHub
-            if [ ! -f README.md ]; then
-              echo "📥 Clonage du repository..."
-              git clone https://github.com/${{ github.repository }}.git .
-            else
-              echo "🔄 Mise à jour du code..."
-              git fetch origin main 2>/dev/null || git clone https://github.com/${{ github.repository }}.git .
-              git reset --hard origin/main 2>/dev/null || true
-            fi
+            # Remplacer l'ancien dossier par le nouveau
+            echo "🔄 Mise à jour du code..."
+            rm -rf "$DEPLOY_DIR" 2>/dev/null || true
+            mv "$TEMP_DIR" "$DEPLOY_DIR"
 
-            echo "✨ Synchronisation finale..."
-            git fetch origin main
-            git reset --hard origin/main
-            git clean -fd
+            # Restaurer les uploads
+            if [ -d "$DEPLOY_DIR/project/wp-content/uploads" ]; then
+              echo "✨ Synchronisation des uploads..."
+              # Uploads restaurés
+            fi
 
             echo "🚀 Redémarrage des services Docker..."
-            cd project/
+            cd "$DEPLOY_DIR/project"
             docker compose down || true
             docker compose up -d --build
+
+            # Nettoyage
+            rm -rf "$TEMP_DIR" 2>/dev/null || true
 
             echo "✅ Déploiement terminé pour $REPO_NAME"
