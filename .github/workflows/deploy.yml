@@ -26,9 +26,27 @@ jobs:
             REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
             DEPLOY_DIR="/var/www/$REPO_NAME"
 
+            echo "📦 Préparation du répertoire..."
+            mkdir -p "$DEPLOY_DIR"
             cd "$DEPLOY_DIR"
 
-            echo "🔄 Synchronisation du code depuis GitHub..."
+            # Nettoyer et réinitialiser le git si problèmes de permissions
+            if [ -d .git ]; then
+              echo "🔄 Repository existe, nettoyage..."
+              rm -rf .git || true
+            fi
+
+            # Clone frais depuis GitHub
+            if [ ! -f README.md ]; then
+              echo "📥 Clonage du repository..."
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              echo "🔄 Mise à jour du code..."
+              git fetch origin main 2>/dev/null || git clone https://github.com/${{ github.repository }}.git .
+              git reset --hard origin/main 2>/dev/null || true
+            fi
+
+            echo "✨ Synchronisation finale..."
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
