@@ -23,20 +23,14 @@ jobs:
             set -e
             cd /var/www/${{ secrets.FOLDER_NAME }}/
 
-            echo "🔐 Reconstruction du repository Git..."
-            # Recréer le repo Git avec les bonnes permissions
-            sudo rm -rf .git
-            git init
-            git remote add origin https://github.com/${{ github.repository }}.git
-            git config user.email "deploy@server"
-            git config user.name "Deploy User"
-
-            echo "🔍 Synchronisation avec GitHub..."
+            echo "🔄 Synchronisation du code..."
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
 
-            echo "🚀 Lancement de Docker..."
+            echo "🚀 Redémarrage des services..."
             cd project/
             docker compose down || true
             docker compose up -d --build
+
+            echo "✅ Déploiement terminé"

@@ -130,8 +130,7 @@ NC='\033[0m'
 echo -e "\${BLUE}📦 Préparation du serveur...\${NC}"
 
 # Créer le dossier si nécessaire
-sudo mkdir -p /var/www/$FOLDER_NAME
-sudo chown $SERVER_USER:$SERVER_USER /var/www/$FOLDER_NAME
+mkdir -p /var/www/$FOLDER_NAME
 
 cd /var/www/$FOLDER_NAME
 
@@ -140,7 +139,6 @@ if [ -d .git ]; then
     echo -e "\${BLUE}🔄 Mise à jour du code existant...\${NC}"
     git fetch origin
     git reset --hard origin/main
-    git pull origin main
 else
     echo -e "\${BLUE}📥 Clonage du repository...\${NC}"
     git clone $REPO_URL .
@@ -182,34 +180,6 @@ echo "✅ WordPress installé sur le serveur"
 ENDSSH
 
 log_success "WordPress installé et configuré sur le serveur"
-
-# ========================================
-# ÉTAPE 5.5 : Correction des permissions serveur
-# ========================================
-
-log_info "Correction des permissions sur le serveur pour déploiement continu..."
-
-ssh -i "$SSH_KEY_PATH" "$SERVER_USER@$SERVER_HOST" << ENDSSH
-set -e
-
-cd /var/www/$FOLDER_NAME
-
-echo "🔐 Correction de la propriété et permissions de Git..."
-sudo chown -R $SERVER_USER:$SERVER_USER .git
-sudo chmod -R u+rwx .git
-
-echo "🔐 Correction de la propriété et permissions du code..."
-sudo chown -R $SERVER_USER:$SERVER_USER .
-
-echo "🔐 Correction des permissions Docker..."
-sudo chown -R 33:33 project/wp/
-sudo find project/wp/ -type d -exec chmod 755 {} \;
-sudo find project/wp/ -type f -exec chmod 644 {} \;
-
-echo "✅ Permissions Docker finalisées"
-ENDSSH
-
-log_success "Permissions serveur corrigées"
 
 # ========================================
 # ÉTAPE 6 : Configuration Nginx
