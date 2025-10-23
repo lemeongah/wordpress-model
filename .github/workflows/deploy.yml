@@ -25,7 +25,7 @@ jobs:
 
             echo "🔐 Reconstruction du repository Git..."
             # Recréer le repo Git avec les bonnes permissions
-            rm -rf .git
+            sudo rm -rf .git
             git init
             git remote add origin https://github.com/${{ github.repository }}.git
             git config user.email "deploy@server"
