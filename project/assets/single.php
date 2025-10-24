@@ -24,10 +24,6 @@ get_header();
                                     <?php echo esc_html( get_the_date( 'd F Y' ) ); ?>
                                 </time>
                             </span>
-                            <span class="entry-author">
-                                <?php echo esc_html( __( 'Par', 'generatepress' ) ); ?>
-                                <?php the_author(); ?>
-                            </span>
                             <?php
                             $categories = get_the_category();
                             if ( ! empty( $categories ) ) {
@@ -196,8 +192,27 @@ get_header();
    Styles modernes pour les articles
    ======================================== */
 
+.container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.content-area {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.site-main {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
 .modern-article {
-    max-width: 900px;
+    max-width: 1200px;
+    width: 100%;
     margin: 2rem auto;
     background: #ffffff;
     border-radius: 12px;
@@ -206,15 +221,16 @@ get_header();
 }
 
 .entry-header {
-    padding: 2rem;
+    padding: 3rem 4rem;
     border-bottom: 1px solid #f0f0f0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #f0f4f8 100%);
 }
 
 .entry-meta-top {
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
     flex-wrap: wrap;
     font-size: 0.95rem;
     color: #666;
@@ -284,10 +300,11 @@ get_header();
 }
 
 .entry-content {
-    padding: 2rem;
+    padding: 3rem 4rem;
     font-size: 1.1rem;
     line-height: 1.8;
     color: #333;
+    background: #ffffff;
 }
 
 .entry-content p {
@@ -340,7 +357,7 @@ get_header();
 }
 
 .entry-footer {
-    padding: 2rem;
+    padding: 3rem 4rem;
     border-top: 1px solid #f0f0f0;
     background: #f9f9f9;
     display: flex;
@@ -426,8 +443,10 @@ get_header();
    ======================================== */
 
 .post-navigation {
-    max-width: 900px;
+    max-width: 1200px;
+    width: 100%;
     margin: 3rem auto;
+    padding: 0 2rem;
 }
 
 .nav-links {
@@ -512,7 +531,11 @@ get_header();
     .entry-header,
     .entry-content,
     .entry-footer {
-        padding: 1.5rem;
+        padding: 2rem 1.5rem;
+    }
+
+    .modern-article {
+        margin: 1rem;
     }
 
     .entry-title {
