@@ -184,14 +184,16 @@ get_header();
 /* Image mise en avant pleine largeur */
 .featured-image-full {
     width: 100%;
-    height: auto;
+    height: 400px;
     margin: 0;
+    overflow: hidden;
 }
 
 .featured-image-full .responsive-img {
     width: 100%;
-    height: auto;
+    height: 100%;
     display: block;
+    object-fit: cover;
 }
 
 /* Contenu principal */
@@ -476,6 +478,10 @@ get_header();
 }
 
 @media (max-width: 768px) {
+    .featured-image-full {
+        height: 250px;
+    }
+
     .article-content-wrapper {
         padding: 1.5rem 1rem;
         max-width: 100%;
